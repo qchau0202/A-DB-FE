@@ -7,7 +7,7 @@ import {
   getAllThreads,
   mapBackendThreadToFeedPost,
   type FeedPost,
-} from "@/services/feed/feedService"
+} from "@/services/mainServices"
 
 export function FeedPage() {
   const { accessToken } = useAuth()

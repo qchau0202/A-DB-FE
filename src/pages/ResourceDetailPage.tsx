@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import type { MediaFile } from "@/services/resource/resourceService"
+import type { MediaFile } from "@/services/mainServices"
 import {
   ArrowBigUp,
   Bookmark,
@@ -44,16 +44,18 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import type { ResourceItem } from "@/data/resources"
-import { getResourceById, updateResource, deleteResource } from "@/services/resource/resourceService"
 import { mapBackendResourceToItem } from "@/data/resources"
-import type { BackendResource } from "@/services/resource/resourceService"
 import {
   getAllCollections,
   getCollectionById,
   createCollection,
   updateCollection,
   type Collection,
-} from "@/services/collection/collectionService"
+  getResourceById,
+  updateResource,
+  deleteResource,
+  type BackendResource,
+} from "@/services/mainServices"
 
 const ResourceDetailPage = () => {
   const { id } = useParams<{ id: string }>()

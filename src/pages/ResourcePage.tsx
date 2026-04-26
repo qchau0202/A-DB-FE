@@ -10,7 +10,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
-import { getResources, createResource } from "@/services/resource/resourceService"
 import {
   Dialog,
   DialogContent,
@@ -25,7 +24,9 @@ import {
   createCollection,
   updateCollection,
   type Collection,
-} from "@/services/collection/collectionService"
+  getResources,
+  createResource,
+} from "@/services/mainServices"
 
 type ResourceScope = "all" | "following" | "mine"
 

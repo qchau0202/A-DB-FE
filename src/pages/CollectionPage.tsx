@@ -46,8 +46,8 @@ import {
   type CollectionItem,
   type CollectionItemType,
   type CollectionVisibility,
-} from "@/services/collection/collectionService"
-import { createResource } from "@/services/resource/resourceService"
+  createResource,
+} from "@/services/mainServices"
 
 const CollectionPage = () => {
   const { user, accessToken } = useAuth()

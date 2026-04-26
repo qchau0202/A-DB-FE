@@ -3,10 +3,9 @@ import { useNavigate } from "react-router-dom"
 import {
   apiLogin,
   apiRegister,
-  apiRefreshToken,
   type AuthSession,
   type BackendUser,
-} from "@/services/auth/authService"
+} from "@/services/mainServices"
 
 export interface User {
   id: string
@@ -24,11 +23,27 @@ interface AuthContextType {
   accessToken: string | null
   login: (email: string, password: string) => Promise<boolean>
   register: (name: string, email: string, password: string) => Promise<boolean>
+  loginDemo: () => Promise<boolean>
   logout: () => void
   isAuthenticated: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+const DEMO_USER: User = {
+  id: "demo-user",
+  studentId: "DEMO2026",
+  name: "Demo Student",
+  email: "demo@student.tdtu.edu.vn",
+  initials: "DS",
+  academicYear: "Year 3",
+  facultyCode: "IT",
+}
+
+const DEMO_SESSION: AuthSession = {
+  access_token: "demo-access-token",
+  refresh_token: "demo-refresh-token",
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -143,6 +158,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const loginDemo = async (): Promise<boolean> => {
+    setUser(DEMO_USER)
+    setSession(DEMO_SESSION)
+    localStorage.setItem("unicircle_user", JSON.stringify(DEMO_USER))
+    localStorage.setItem("unicircle_session", JSON.stringify(DEMO_SESSION))
+
+    return true
+  }
+
   const logout = () => {
     setUser(null)
     setSession(null)
@@ -159,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         accessToken: session?.access_token ?? null,
         login,
         register,
+        loginDemo,
         logout,
         isAuthenticated: !!user,
       }}

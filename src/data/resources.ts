@@ -1,4 +1,4 @@
-import type { BackendResource, MediaFile } from "@/services/resource/resourceService"
+import type { BackendResource, MediaFile } from "@/services/mainServices"
 
 export interface ResourceItem {
   id: string

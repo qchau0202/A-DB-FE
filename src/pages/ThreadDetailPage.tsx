@@ -23,8 +23,6 @@ import {
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
-import { followUser, unfollowUser, checkFollowStatus } from "@/services/profile/profileService"
-import { createNotification } from "@/services/notificationService"
 import {
   getThreadById,
   getCommentsByThreadId,
@@ -37,7 +35,11 @@ import {
   mapBackendCommentToFeedComment,
   type FeedPost,
   type FeedComment,
-} from "@/services/feed/feedService"
+  followUser,
+  unfollowUser,
+  checkFollowStatus,
+  createNotification,
+} from "@/services/mainServices"
 
 export default function ThreadDetailPage() {
   const DEFAULT_AVATAR = "/UniCircle_logo-removebg.png"

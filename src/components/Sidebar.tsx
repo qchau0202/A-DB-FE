@@ -20,7 +20,7 @@ const menuItems = [
 
 export function Sidebar({ activeItem = "home", collapsed = false, onToggleCollapse }: SidebarProps) {
   const { user, logout } = useAuth()
-  const DEFAULT_AVATAR = "/UniCircle_logo-removebg.png"
+  const DEFAULT_AVATAR = "/DevConnect_logo-removebg.png"
 
   return (
     <aside
@@ -37,10 +37,10 @@ export function Sidebar({ activeItem = "home", collapsed = false, onToggleCollap
               to="/"
               className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
             >
-              <img src="/UniCircle_logo-removebg.png" alt="Uni Circle" className="w-8 h-8 object-contain" />
+              <img src="/dev_connect-logo.png" alt="Uni Circle" className="w-8 h-8 object-contain" />
               <div className="flex flex-col leading-tight">
-                <span className="text-lg font-bold text-[#141414]">UniCircle</span>
-                <span className="text-xs text-gray-400">Study platform</span>
+                <span className="text-lg font-bold text-[#141414]">DevConnect</span>
+                <span className="text-xs text-gray-400">Social developer platform</span>
               </div>
             </Link>
           )}

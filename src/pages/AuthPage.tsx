@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext"
 
 const AuthPage = () => {
   const navigate = useNavigate()
-  const { login, register, isAuthenticated } = useAuth()
+  const { login, register, loginDemo, isAuthenticated } = useAuth()
   const [loginEmail, setLoginEmail] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
   const [registerName, setRegisterName] = useState("")
@@ -66,6 +66,16 @@ const AuthPage = () => {
       toast.error("Registration failed", {
         description: "Please try again",
       })
+    }
+  }
+
+  const handleDemoLogin = async () => {
+    const success = await loginDemo()
+    if (success) {
+      toast.success("Demo mode enabled", {
+        description: "You can now browse the UI without connecting the backend.",
+      })
+      navigate("/")
     }
   }
 
@@ -156,6 +166,14 @@ const AuthPage = () => {
                     className="w-full bg-[#036aff] text-white font-bold hover:bg-[#036aff]/90 h-10"
                   >
                     Sign in
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleDemoLogin}
+                    className="w-full border-[#036aff]/20 text-[#036aff] font-bold hover:bg-[#036aff]/5 h-10"
+                  >
+                    Continue in demo mode
                   </Button>
                 </form>
               </TabsContent>

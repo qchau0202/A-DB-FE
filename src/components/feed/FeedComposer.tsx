@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
-import { createThread } from "@/services/feed/feedService"
+import { createThread } from "@/services/mainServices"
 
 type ComposerPrivacy = "public" | "friends"
 

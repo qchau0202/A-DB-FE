@@ -16,8 +16,7 @@ import {
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
-import { followUser, unfollowUser } from "@/services/profile/profileService"
-import { createNotification } from "@/services/notificationService"
+import { followUser, unfollowUser, createNotification } from "@/services/mainServices"
 import type { FeedPost } from "@/data/feed"
 
 interface FeedPostCardProps {
