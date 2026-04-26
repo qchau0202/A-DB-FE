@@ -1,40 +1,24 @@
-UniCircle Frontend – Quick Setup
+DevConnect Frontend – Quick Setup
 ================================
 
 Requirements
 ------------
-- Node.js 18+ and npm
+Node.js and npm package manager
 
 1. Install dependencies
 -----------------------
-From the `fe` folder:
+From the `A-DB-FE` folder:
 
 ```bash
-cd fe
+cd A-DB-FE
 npm install
 ```
 
-2. Start the Auth Service (backend)
------------------------------------
-In another terminal, go to the auth service and run:
-
-```bash
-cd ../be/auth_service
-npm install
-npm run dev
-```
-
-By default it runs on `http://localhost:3001`.
-
-3. Configure the frontend
+2. Configure the frontend and run development server
 -------------------------
-In the `fe` folder, create a `.env` file:
+In the `fe` folder, create a `.env` file to store environment
 
-```env
-VITE_AUTH_SERVICE_URL=http://localhost:3001/api/auth
-```
-
-4. Run the frontend
+3. Run the frontend
 -------------------
 From the `fe` folder:
 
