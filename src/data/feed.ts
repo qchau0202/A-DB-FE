@@ -1,6 +1,4 @@
 export type FeedPrivacy = "public" | "friends"
-
-// Simple thread typing aligned with your spec
 export type ThreadType = "Q&A" | "Normal"
 export type ThreadStatus = "OPEN" | "CLOSED"
 
@@ -18,7 +16,6 @@ export interface FeedComment {
   initials: string
   text: string
   createdAt: string
-  // UI-only metadata to support reply/edit flows
   isEdited?: boolean
   parentCommentId?: string | null
   parentAuthor?: string | null
@@ -35,7 +32,6 @@ export interface FeedPost {
   }
   createdAt: string
   privacy: FeedPrivacy
-  // Thread-specific metadata
   threadType: ThreadType
   status: ThreadStatus
   isEdited?: boolean

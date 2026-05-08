@@ -22,30 +22,30 @@ export interface SocialLink {
 // Shape of profile data used in the UI (mapped from backend profile & auth user)
 export interface ProfileInfo {
   id: string
-  studentId: string
+  userId: string
+  username: string
   displayName: string
-  dob: string
-  phoneNumber: string
-  faculty: string
-  bio?: string | null
-  academicYear: string
-  avatarUrl?: string | null
-  socialLinks: SocialLink[]
-  updatedAt?: string
+  bio: string | null
+  avatarUrl: string | null
+  departmentId: number | null
+  followerCount: number
+  following: string[]
+  createdAt: string
+  updatedAt: string | null
   email: string
 }
 
 export const emptyProfileInfo: ProfileInfo = {
   id: "",
-  studentId: "",
+  userId: "",
+  username: "",
   displayName: "",
-  dob: "",
-  phoneNumber: "",
-  faculty: "",
   bio: "",
-  academicYear: "",
   avatarUrl: "",
-  socialLinks: [],
+  departmentId: null,
+  followerCount: 0,
+  following: [],
+  createdAt: "",
   updatedAt: "",
   email: "",
 }

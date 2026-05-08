@@ -6,19 +6,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
-import { createThread } from "@/services/mainServices"
+import { createPost } from "@/services/mainServices"
 
-type ComposerPrivacy = "public" | "friends"
+type ComposerPrivacy = "public" | "private"
 
 interface FeedComposerProps {
-  onThreadCreated?: () => void
+  onPostCreated?: () => void
 }
 
-export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
+export function FeedComposer({ onPostCreated }: FeedComposerProps) {
   const { user, accessToken } = useAuth()
   const DEFAULT_AVATAR = "/UniCircle_logo-removebg.png"
   const [privacy, setPrivacy] = useState<ComposerPrivacy>("public")
-  const [threadType, setThreadType] = useState<"Q&A" | "Discussion">("Q&A")
   const [content, setContent] = useState("")
   const [isFocused, setIsFocused] = useState(false)
   const [isPosting, setIsPosting] = useState(false)
@@ -32,7 +31,7 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
     if (!files) return
 
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'))
-    
+
     if (imageFiles.length === 0) {
       toast.error("Please select image files only")
       return
@@ -50,7 +49,7 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
     })
 
     setAttachedImages([...attachedImages, ...newImages])
-    
+
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
@@ -63,21 +62,6 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
       URL.revokeObjectURL(imageToRemove.url)
     }
     setAttachedImages(attachedImages.filter(img => img.id !== id))
-  }
-
-  const convertImageToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          resolve(reader.result)
-        } else {
-          reject(new Error('Failed to convert image to base64'))
-        }
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
   }
 
   const handlePost = async () => {
@@ -97,49 +81,52 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
 
     try {
       setIsPosting(true)
-      
-      // Tags based on selected thread type
-      const tags: string[] = [threadType]
 
-      // Convert images to base64 data URLs
-      let attachments = undefined
-      if (attachedImages.length > 0) {
-        const imagePromises = attachedImages.map(async (img) => {
-          const base64 = await convertImageToBase64(img.file)
-          return {
-            id: img.id,
-            url: base64
-          }
+      // Tags - can be extracted from content hashtags if needed
+      const tags: string[] = []
+
+      // Build content blocks from text and images
+      const contentBlocks = []
+      
+      // Add text block if there's content
+      if (content.trim()) {
+        contentBlocks.push({
+          type: 'text' as const,
+          data: content.trim()
         })
-        const images = await Promise.all(imagePromises)
-        attachments = { images }
+      }
+      
+      // Add image blocks
+      if (attachedImages.length > 0) {
+        const imageUrls = attachedImages.map(img => img.url)
+        contentBlocks.push({
+          type: 'image' as const,
+          data: { urls: imageUrls }
+        })
       }
 
-      // For now, always use "public" visibility since "friends" requires
-      // a friends system with allowed_viewers array which we don't have yet
-      await createThread(
+      await createPost(
         {
-          content: content.trim(),
+          title: content.trim().slice(0, 100),
+          content_blocks: contentBlocks,
           tags,
-          visibility: "public", // Always public for now
-          attachments,
+          visibility: "public",
+          image_urls: attachedImages.map(img => img.url),
         },
         accessToken
       )
 
-    toast.success("Post published!", {
-        description: `Your thread has been shared ${privacy === "public" ? "publicly" : "with friends"}`,
-    })
-      
+      toast.success("Post published!")
+
       // Clean up
       attachedImages.forEach(img => URL.revokeObjectURL(img.url))
-    setContent("")
+      setContent("")
       setAttachedImages([])
       setIsFocused(false)
-      
-      // Notify parent to reload threads
-      if (onThreadCreated) {
-        onThreadCreated()
+
+      // Notify parent to reload posts
+      if (onPostCreated) {
+        onPostCreated()
       }
     } catch (error) {
       console.error("Failed to create thread:", error)
@@ -170,7 +157,6 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Prevent blur when clicking on interactive elements
     e.preventDefault()
   }
 
@@ -190,10 +176,10 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
           <div className="flex-1 min-w-0">
             <div className="space-y-3">
               <div className="relative">
-            <textarea
-                  rows={isFocused ? 4 : 2}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
+                <textarea
+                  rows={isFocused ? 8 : 2}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
                   onFocus={() => setIsFocused(true)}
                   onBlur={handleBlur}
                   className={cn(
@@ -202,7 +188,7 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
                       ? "border-[#036aff] ring-2 ring-[#036aff]/10 bg-white"
                       : "border-gray-200 bg-gray-50/50 hover:border-gray-300 hover:bg-white",
                   )}
-                  placeholder="What's on your mind? Ask a question or start a discussion..."
+                  placeholder="What's on your mind? Share your thoughts, ideas, or questions..."
                 />
                 {isFocused && (
                   <div className="absolute bottom-2 right-2 text-xs text-gray-400">
@@ -236,7 +222,7 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
 
               {isFocused && (
                 <div className="flex flex-col gap-3 pt-2 border-t border-gray-100">
-              <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -245,19 +231,19 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
                       onChange={handleImageSelect}
                       className="hidden"
                     />
-                <Button
+                    <Button
                       type="button"
                       variant="outline"
-                  size="sm"
+                      size="sm"
                       onMouseDown={handleMouseDown}
                       onClick={() => fileInputRef.current?.click()}
                       disabled={attachedImages.length >= 4}
                       className="inline-flex items-center gap-2 h-9 px-3 text-sm"
-                >
+                    >
                       <Image className="h-4 w-4" />
                       Add image
-                </Button>
-              </div>
+                    </Button>
+                  </div>
 
                   <div className="flex items-center justify-between flex-wrap gap-3">
                     <div className="flex flex-wrap items-center gap-3">
@@ -265,66 +251,37 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
                         <button
                           type="button"
                           onMouseDown={handleMouseDown}
-                          onClick={() => setThreadType("Q&A")}
+                          onClick={() => setPrivacy("public")}
                           className={cn(
                             "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                            threadType === "Q&A"
+                            privacy === "public"
                               ? "bg-white text-[#141414] shadow-sm"
                               : "text-gray-600 hover:text-[#141414]",
                           )}
                         >
-                          Q&A
+                          <Globe2 className="h-3.5 w-3.5" />
+                          Public
                         </button>
                         <button
                           type="button"
                           onMouseDown={handleMouseDown}
-                          onClick={() => setThreadType("Discussion")}
+                          onClick={() => setPrivacy("private")}
                           className={cn(
                             "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                            threadType === "Discussion"
+                            privacy === "private"
                               ? "bg-white text-[#141414] shadow-sm"
                               : "text-gray-600 hover:text-[#141414]",
                           )}
                         >
-                          Discussion
+                          <Users className="h-3.5 w-3.5" />
+                          Private
                         </button>
                       </div>
-
-                      <div className="flex items-center rounded-lg bg-gray-100 p-0.5">
-                  <button
-                    type="button"
-                          onMouseDown={handleMouseDown}
-                    onClick={() => setPrivacy("public")}
-                    className={cn(
-                            "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                      privacy === "public"
-                        ? "bg-white text-[#141414] shadow-sm"
-                        : "text-gray-600 hover:text-[#141414]",
-                    )}
-                  >
-                          <Globe2 className="h-3.5 w-3.5" />
-                    Public
-                  </button>
-                  <button
-                    type="button"
-                          onMouseDown={handleMouseDown}
-                    onClick={() => setPrivacy("friends")}
-                    className={cn(
-                            "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                      privacy === "friends"
-                        ? "bg-white text-[#141414] shadow-sm"
-                        : "text-gray-600 hover:text-[#141414]",
-                    )}
-                  >
-                          <Users className="h-3.5 w-3.5" />
-                          Friends
-                  </button>
-                </div>
                     </div>
 
-                <Button
+                    <Button
                       onMouseDown={handleMouseDown}
-                  onClick={handlePost}
+                      onClick={handlePost}
                       disabled={(!hasContent && attachedImages.length === 0) || isPosting}
                       className={cn(
                         "font-semibold text-sm px-5 h-9 rounded-lg transition-all",
@@ -332,10 +289,10 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
                           ? "bg-[#036aff] text-white hover:bg-[#0052cc] shadow-sm hover:shadow-md"
                           : "bg-gray-200 text-gray-400 cursor-not-allowed",
                       )}
-                >
+                    >
                       {isPosting ? "Posting..." : "Post"}
-                </Button>
-              </div>
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -345,5 +302,3 @@ export function FeedComposer({ onThreadCreated }: FeedComposerProps) {
     </Card>
   )
 }
-
-

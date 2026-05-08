@@ -1,21 +1,22 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 import {
   apiLogin,
   apiRegister,
+  getProfileByUserId,
   type AuthSession,
   type BackendUser,
 } from "@/services/mainServices"
 
 export interface User {
   id: string
-  studentId: string
-  name: string
   email: string
+  name: string
   initials: string
   avatar?: string
-  academicYear?: string
-  facultyCode?: string
+  bio?: string
+  departmentId?: number | null
 }
 
 interface AuthContextType {
@@ -23,27 +24,11 @@ interface AuthContextType {
   accessToken: string | null
   login: (email: string, password: string) => Promise<boolean>
   register: (name: string, email: string, password: string) => Promise<boolean>
-  loginDemo: () => Promise<boolean>
   logout: () => void
   isAuthenticated: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-const DEMO_USER: User = {
-  id: "demo-user",
-  studentId: "DEMO2026",
-  name: "Demo Student",
-  email: "demo@student.tdtu.edu.vn",
-  initials: "DS",
-  academicYear: "Year 3",
-  facultyCode: "IT",
-}
-
-const DEMO_SESSION: AuthSession = {
-  access_token: "demo-access-token",
-  refresh_token: "demo-refresh-token",
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -52,26 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const buildUserFromBackend = (backendUser: BackendUser): User => {
     const email = backendUser.email
+    // Use display_name from user_metadata, fall back to username, then email prefix
     const nameFromBackend =
-      // Prefer the nickname/username stored in user_metadata,
-      // then fall back to top-level username, then email prefix.
+      (backendUser.user_metadata as any)?.display_name ||
       (backendUser.user_metadata as any)?.username ||
       backendUser.username ||
-      backendUser.user_metadata?.full_name ||
       email?.split("@")[0] ||
       "Student"
-
-    const studentCodeBackend =
-      backendUser.student_code ||
-      backendUser.user_metadata?.student_code ||
-      email?.split("@")[0] ||
-      ""
-
-    const academicYear =
-      (backendUser.user_metadata as any)?.academic_year || undefined
-
-    const facultyCode =
-      (backendUser.user_metadata as any)?.faculty_code || undefined
 
     const initials =
       nameFromBackend
@@ -87,11 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       id: backendUser.id,
       email,
       name: nameFromBackend,
-      studentId: studentCodeBackend,
       initials,
       avatar,
-      academicYear,
-      facultyCode,
     }
   }
 
@@ -120,6 +89,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("unicircle_session")
       }
     }
+
+    // Validate token on load - if we have a session, verify it's still valid
+    const validateSession = async () => {
+      // If we have user but no session, clear the user (incomplete auth state)
+      if (parsedUser?.id && !parsedSession?.access_token) {
+        console.log("[Auth] User exists but no session, clearing auth state")
+        localStorage.removeItem("unicircle_user")
+        localStorage.removeItem("unicircle_session")
+        setUser(null)
+        setSession(null)
+        return
+      }
+      
+      if (parsedSession?.access_token && parsedUser?.id) {
+        try {
+          // Try to fetch profile - this will fail with 401 if token is expired
+          await getProfileByUserId(parsedUser.id, parsedSession.access_token)
+          console.log("[Auth] Session validated successfully")
+        } catch (error: any) {
+          // If we get 401, the session is expired
+          if (error?.message?.includes("401") || error?.message?.includes("403")) {
+            console.log("[Auth] Session expired, logging out")
+            toast.error("Your session has expired. Please log in again.")
+            // Clear stored data
+            localStorage.removeItem("unicircle_user")
+            localStorage.removeItem("unicircle_session")
+            setUser(null)
+            setSession(null)
+            navigate("/auth")
+          }
+        }
+      }
+    }
+    
+    validateSession()
 
   }, [])
 
@@ -158,15 +162,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const loginDemo = async (): Promise<boolean> => {
-    setUser(DEMO_USER)
-    setSession(DEMO_SESSION)
-    localStorage.setItem("unicircle_user", JSON.stringify(DEMO_USER))
-    localStorage.setItem("unicircle_session", JSON.stringify(DEMO_SESSION))
-
-    return true
-  }
-
   const logout = () => {
     setUser(null)
     setSession(null)
@@ -176,6 +171,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     navigate("/auth")
   }
 
+  // Listen for 401/403 unauthorized events from API calls
+  useEffect(() => {
+    // Small delay to allow initial session validation to complete first
+    const timer = setTimeout(() => {
+      const handleUnauthorized = (event: CustomEvent) => {
+        // Only logout if we're actually authenticated (prevents race conditions)
+        if (session?.access_token) {
+          toast.error(event.detail?.message || "Session expired. Please log in again.")
+          logout()
+        }
+      }
+      
+      window.addEventListener('api:unauthorized' as any, handleUnauthorized as any)
+      
+      // Cleanup function
+      return () => {
+        window.removeEventListener('api:unauthorized' as any, handleUnauthorized as any)
+      }
+    }, 500)
+    
+    return () => clearTimeout(timer)
+  }, [logout, session])
+
   return (
     <AuthContext.Provider
       value={{
@@ -183,7 +201,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         accessToken: session?.access_token ?? null,
         login,
         register,
-        loginDemo,
         logout,
         isAuthenticated: !!user,
       }}

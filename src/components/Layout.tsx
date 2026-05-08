@@ -9,22 +9,21 @@ export function Layout() {
   // Map routes to sidebar items
   const getActiveItem = () => {
     const path = location.pathname
-    if (path === "/" || path === "/home") return "home"
-    if (path === "/feed") return "feed"
-    if (path === "/collections") return "collections"
-    if (path === "/resource") return "resource"
+    if (path === "/" || path === "/home" || path === "/feed") return "home"
+    if (path === "/explore") return "explore"
+    if (path === "/categories") return "categories"
     return "home"
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
+    <div className="h-screen flex overflow-hidden bg-[#0d0d0d]">
       <Sidebar
         activeItem={getActiveItem()}
         collapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
       />
-      <div className="flex-1 border-l border-gray-200 h-screen overflow-hidden bg-gray-50">
-          <div className="h-full overflow-y-auto p-6 bg-gray-50">
+      <div className="flex-1 h-screen overflow-hidden">
+          <div className="h-full overflow-y-auto">
             <Outlet />
         </div>
       </div>

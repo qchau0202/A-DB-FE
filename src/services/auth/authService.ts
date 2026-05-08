@@ -1,5 +1,5 @@
-const AUTH_BASE_URL =
-  import.meta.env.VITE_AUTH_SERVICE_URL || "http://localhost:3001/api/auth"
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api"
+const AUTH_BASE_URL = `${API_BASE_URL}/auth`
 
 export interface AuthSession {
   access_token: string
@@ -9,12 +9,12 @@ export interface AuthSession {
 export interface BackendUser {
   id: string
   email: string
-  student_code?: string
   username?: string
   user_metadata?: {
     full_name?: string
+    display_name?: string
     avatar_url?: string
-    student_code?: string
+    [key: string]: any
   }
   [key: string]: any
 }
@@ -28,6 +28,7 @@ export interface LoginResponse {
 export interface RegisterResponse {
   message?: string
   user: BackendUser
+  session?: AuthSession
   profile?: any
 }
 
@@ -50,7 +51,7 @@ export async function apiLogin(
   email: string,
   password: string,
 ): Promise<LoginResponse> {
-  const res = await fetch(`${AUTH_BASE_URL}/login`, {
+  const res = await fetch(`${AUTH_BASE_URL}/sign-in`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -63,16 +64,16 @@ export async function apiLogin(
 
 export async function apiRegister(
   name: string,
-  studentEmail: string,
+  email: string,
   password: string,
 ): Promise<RegisterResponse> {
-  const res = await fetch(`${AUTH_BASE_URL}/register`, {
+  const res = await fetch(`${AUTH_BASE_URL}/sign-up`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      student_email: studentEmail,
+      email: email,
       username: name,
       password,
     }),

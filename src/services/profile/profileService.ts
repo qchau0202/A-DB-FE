@@ -1,35 +1,31 @@
-const PROFILE_BASE_URL =
-  import.meta.env.VITE_PROFILE_SERVICE_URL || "http://localhost:3003/api/profile"
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3000/api"
+
+const PROFILE_BASE_URL = `${API_BASE_URL}/profile`
 
 export interface BackendProfile {
   id: string
-  student_id: string
-  display_name: string
-  dob: string | null
-  phone_number: string | null
-  faculty: string | null
+  user_id: string
+  username: string | null
+  display_name: string | null
   bio: string | null
-  academic_year: string | null
   avatar_url: string | null
-  social_links: any | null
+  department_id: number | null
+  follower_count: number
+  following: string[]
+  created_at: string
   updated_at: string | null
-  student?: {
-    id: string
-    student_code: string
-    email: string
-  }
 }
 
 export interface UpdateProfilePayload {
+  username?: string
   display_name?: string
-  dob?: string
-  phone_number?: string
-  faculty?: string
   bio?: string
-  academic_year?: string
   avatar_url?: string
-  social_links?: Record<string, string>
+  department_id?: number
 }
+
+export interface CommunityProfile extends BackendProfile {}
 
 const authHeaders = (accessToken: string) => ({
   "Content-Type": "application/json",
@@ -43,7 +39,6 @@ async function handleProfileResponse(response: Response): Promise<BackendProfile
   try {
     data = raw ? JSON.parse(raw) : {}
   } catch {
-    // Non-JSON, likely HTML error page or reverse proxy message
     const snippet = raw?.slice(0, 120) || "No response body"
     throw new Error(
       `Profile service returned a non-JSON response (HTTP ${response.status}). First bytes: ${snippet}`,
@@ -53,9 +48,15 @@ async function handleProfileResponse(response: Response): Promise<BackendProfile
   if (!response.ok) {
     const message =
       data?.error?.message || data?.message || `HTTP ${response.status} – Failed to load profile`
+    if (response.status === 401 || response.status === 403) {
+      window.dispatchEvent(new CustomEvent('api:unauthorized', { 
+        detail: { message: message || 'Session expired. Please log in again.' }
+      }))
+    }
     throw new Error(message)
   }
 
+  // Backend returns { profile } or direct profile object
   return (data.profile || data) as BackendProfile
 }
 
@@ -66,21 +67,48 @@ export async function getProfileById(
   const res = await fetch(`${PROFILE_BASE_URL}/${id}`, {
     headers: authHeaders(accessToken),
   })
-
   return handleProfileResponse(res)
 }
 
+export async function getProfileByUserId(
+  userId: string,
+  accessToken?: string,
+): Promise<BackendProfile> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`
+  }
+  const res = await fetch(`${PROFILE_BASE_URL}/by-user/${userId}`, { headers })
+  return handleProfileResponse(res)
+}
+
+export async function getProfilesByDepartment(departmentId: number): Promise<CommunityProfile[]> {
+  const res = await fetch(`${PROFILE_BASE_URL}/department/${departmentId}`)
+  const raw = await res.text()
+
+  let data: any
+  try {
+    data = raw ? JSON.parse(raw) : {}
+  } catch {
+    throw new Error(`Profile service returned a non-JSON response (HTTP ${res.status})`)
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.message || `HTTP ${res.status} – Failed to load department profiles`)
+  }
+
+  return (data.profiles || []) as CommunityProfile[]
+}
+
 export async function updateProfile(
-  id: string,
   payload: UpdateProfilePayload,
   accessToken: string,
 ): Promise<BackendProfile> {
-  const res = await fetch(`${PROFILE_BASE_URL}/${id}`, {
-    method: "PUT",
+  const res = await fetch(`${PROFILE_BASE_URL}`, {
+    method: "PATCH",
     headers: authHeaders(accessToken),
     body: JSON.stringify(payload),
   })
-
   return handleProfileResponse(res)
 }
 
@@ -98,23 +126,19 @@ export async function createProfile(
 }
 
 export async function followUser(
-  id: string,
+  userId: string,
   accessToken: string,
-  followerId?: string,
 ): Promise<void> {
-  // Get follower_id from JWT token if not provided
-  // For now, we'll need to pass it from the component
-  const res = await fetch(`${PROFILE_BASE_URL}/following/${id}`, {
+  const res = await fetch(`${PROFILE_BASE_URL}/follow/${userId}`, {
     method: "POST",
     headers: authHeaders(accessToken),
-    body: JSON.stringify({ follower_id: followerId }),
   })
   if (!res.ok) {
     const text = await res.text()
     let errorMessage = text || "Failed to follow user"
     try {
       const errorData = JSON.parse(text)
-      errorMessage = errorData.error?.message || errorMessage
+      errorMessage = errorData.message || errorMessage
     } catch {
       // Not JSON, use text as is
     }
@@ -123,21 +147,19 @@ export async function followUser(
 }
 
 export async function unfollowUser(
-  id: string,
+  userId: string,
   accessToken: string,
-  followerId?: string,
 ): Promise<void> {
-  const res = await fetch(`${PROFILE_BASE_URL}/following/${id}`, {
-    method: "PUT",
+  const res = await fetch(`${PROFILE_BASE_URL}/unfollow/${userId}`, {
+    method: "POST",
     headers: authHeaders(accessToken),
-    body: JSON.stringify({ follower_id: followerId }),
   })
   if (!res.ok) {
     const text = await res.text()
     let errorMessage = text || "Failed to unfollow user"
     try {
       const errorData = JSON.parse(text)
-      errorMessage = errorData.error?.message || errorMessage
+      errorMessage = errorData.message || errorMessage
     } catch {
       // Not JSON, use text as is
     }
@@ -146,15 +168,14 @@ export async function unfollowUser(
 }
 
 export async function checkFollowStatus(
-  id: string,
+  targetUserId: string,
   accessToken: string,
-  followerId: string,
+  currentUserId: string,
 ): Promise<boolean> {
-  const res = await fetch(`${PROFILE_BASE_URL}/following/${id}?follower_id=${followerId}`, {
+  const res = await fetch(`${PROFILE_BASE_URL}/${currentUserId}/is-following/${targetUserId}`, {
     headers: authHeaders(accessToken),
   })
   if (!res.ok) {
-    // If error, assume not following
     return false
   }
   const data = await res.json()

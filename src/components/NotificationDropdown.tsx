@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 import {
   fetchNotifications,
-  deleteNotification,
+  deleteNotificationByToken,
   type Notification,
 } from "@/services/mainServices"
 import { useNavigate } from "react-router-dom"
@@ -27,8 +27,8 @@ export function NotificationDropdown() {
     fetchNotifications(accessToken)
       .then((notifs) => {
         setNotifications(notifs.sort((a, b) => {
-          const aDate = new Date((a.created_at as string) || "").getTime() || 0
-          const bDate = new Date((b.created_at as string) || "").getTime() || 0
+          const aDate = new Date(a.createdAt || "").getTime() || 0
+          const bDate = new Date(b.createdAt || "").getTime() || 0
           return bDate - aDate
         }))
       })
@@ -47,18 +47,20 @@ export function NotificationDropdown() {
   }, [user, accessToken])
 
   const renderNotificationTitle = (notification: Notification) => {
-    const sender = notification.sender?.display_name || notification.sender_id || 'Someone'
+    const sender = notification.sender_id || 'Someone'
     switch (notification.type) {
-      case 'thread_comment':
-        return `${sender} commented on your thread`
-      case 'comment_reply':
-        return `${sender} replied to your comment`
+      case 'post_comment':
+        return `${sender} commented on your post`
       case 'follow':
         return `${sender} started following you`
       case 'mention':
         return `${sender} mentioned you`
-      case 'like':
+      case 'post_like':
         return `${sender} liked your post`
+      case 'quickie_react':
+        return `${sender} reacted to your quickie`
+      case 'document_like':
+        return `${sender} liked your document`
       default:
         return notification.title || ''
     }
@@ -71,11 +73,17 @@ export function NotificationDropdown() {
     const anyNotif = notification as any
     if (anyNotif.link) return navigate(anyNotif.link)
 
-    // Fallback link construction based on reference_type
-    if (notification.reference_type === 'thread' && notification.reference_id) {
-      return navigate(`/thread/${notification.reference_id}`)
+    // Fallback link construction based on target_type
+    if (notification.target_type === 'post' && notification.target_id) {
+      return navigate(`/feed/${notification.target_id}`)
     }
-    if ((notification.type === 'follow' || notification.type === 'system') && notification.sender_id) {
+    if (notification.target_type === 'quickie' && notification.target_id) {
+      return navigate(`/quickies/${notification.target_id}`)
+    }
+    if (notification.target_type === 'document' && notification.target_id) {
+      return navigate(`/documents/${notification.target_id}`)
+    }
+    if (notification.type === 'follow' && notification.sender_id) {
       return navigate(`/profile/${notification.sender_id}`)
     }
     // Default: go to notifications page
@@ -85,15 +93,15 @@ export function NotificationDropdown() {
   const handleDelete = (e: React.MouseEvent, notificationId: string) => {
     e.stopPropagation()
     if (!user || !accessToken) return
-    deleteNotification(accessToken, notificationId)
+    deleteNotificationByToken(accessToken, notificationId)
       .then(loadNotifications)
       .catch((err) => console.error("Failed to delete notification:", err))
   }
 
   const getNotificationIcon = (type?: string) => {
     switch (type) {
-      case 'thread_comment':
-      case 'comment_reply':
+      case 'post_comment':
+      case 'quickie_view':
         return <Bell className="h-4 w-4 text-gray-600" />
       case 'follow':
         return <svg className="h-4 w-4 text-gray-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zM3 21a9 9 0 0118 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -123,7 +131,7 @@ export function NotificationDropdown() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5 text-[#141414]" />
+          <Bell className="h-5 w-5 text-[#ffffff]" />
           {unreadCount > 0 && (
             <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-[#036aff] text-white text-xs">
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -157,14 +165,14 @@ export function NotificationDropdown() {
                       <div className="flex-1">
                         {/* Render tailored message when title not provided */}
                         <p className="text-xs font-semibold text-[#141414]">{notification.title || renderNotificationTitle(notification)}</p>
-                        <p className="text-xs text-gray-600 mt-0.5">{notification.message}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">{notification.created_at ? formatTime(notification.created_at) : ''}</p>
+                        <p className="text-xs text-gray-600 mt-0.5">{notification.body}</p>
+                        <p className="text-[10px] text-gray-400 mt-1">{notification.createdAt ? formatTime(notification.createdAt) : ''}</p>
                       </div>
                       {/* Read state not supported in API; badge omitted */}
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => handleDelete(e, notification.id)}
+                        onClick={(e) => handleDelete(e, notification._id)}
                         className="h-6 w-6 p-0 hover:bg-red-50"
                       >
                         <X className="h-3 w-3" />

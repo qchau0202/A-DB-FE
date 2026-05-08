@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext"
 
 const AuthPage = () => {
   const navigate = useNavigate()
-  const { login, register, loginDemo, isAuthenticated } = useAuth()
+  const { login, register, isAuthenticated } = useAuth()
   const [loginEmail, setLoginEmail] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
   const [registerName, setRegisterName] = useState("")
@@ -34,7 +34,7 @@ const AuthPage = () => {
     const success = await login(loginEmail, loginPassword)
     if (success) {
       toast.success("Login successful!", {
-        description: "Welcome back to UniCircle",
+        description: "Welcome back to DevConnect",
       })
       navigate("/")
     } else {
@@ -59,7 +59,7 @@ const AuthPage = () => {
     const success = await register(registerName, registerEmail, registerPassword)
     if (success) {
       toast.success("Account created successfully!", {
-        description: "Welcome to UniCircle!",
+        description: "Welcome to DevConnect!",
       })
       navigate("/")
     } else {
@@ -69,40 +69,30 @@ const AuthPage = () => {
     }
   }
 
-  const handleDemoLogin = async () => {
-    const success = await loginDemo()
-    if (success) {
-      toast.success("Demo mode enabled", {
-        description: "You can now browse the UI without connecting the backend.",
-      })
-      navigate("/")
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <img src="/UniCircle_logo-removebg.png" alt="Uni Circle" className="w-12 h-12 object-contain" />
-          <span className="text-2xl font-bold text-[#141414]">UniCircle</span>
+          <img src="/dev_connect-logo.png" alt="DevConnect" className="w-24 h-24 object-contain" />
+          <span className="text-3xl font-bold text-white">DevConnect</span>
         </div>
 
-        <Card className="border border-gray-200 rounded-xl shadow-lg">
+        <Card className="rounded-xl shadow-lg bg-[#1a1a1a]">
           <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold text-[#141414]">Welcome to UniCircle</CardTitle>
-            <CardDescription className="text-sm text-gray-500">
-              Connect with classmates, share resources, and study together
+            <CardTitle className="text-2xl font-bold text-white">Welcome to DevConnect</CardTitle>
+            <CardDescription className="text-sm text-gray-400">
+              Connect with peers, share resources, and enjoy coding!
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-[#f5f5f5] p-1">
+              <TabsList className="grid w-full grid-cols-2 bg-[#2a2a2a] p-1">
                 <TabsTrigger
                   value="login"
                   className={cn(
                     "rounded-md font-semibold text-sm transition-colors",
                     "data-[state=active]:bg-white data-[state=active]:text-[#141414] data-[state=active]:shadow-sm",
-                    "data-[state=inactive]:text-gray-600"
+                    "data-[state=inactive]:text-gray-400"
                   )}
                 >
                   Login
@@ -112,7 +102,7 @@ const AuthPage = () => {
                   className={cn(
                     "rounded-md font-semibold text-sm transition-colors",
                     "data-[state=active]:bg-white data-[state=active]:text-[#141414] data-[state=active]:shadow-sm",
-                    "data-[state=inactive]:text-gray-600"
+                    "data-[state=inactive]:text-gray-400"
                   )}
                 >
                   Register
@@ -122,21 +112,21 @@ const AuthPage = () => {
               <TabsContent value="login" className="space-y-4 mt-6">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="login-email" className="text-sm font-semibold text-[#141414]">
+                    <label htmlFor="login-email" className="text-sm font-semibold text-white">
                       Email
                     </label>
                     <Input
                       id="login-email"
                       type="email"
-                      placeholder="your.email@student.tdtu.edu.vn"
+                      placeholder="example@email.com"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       required
-                      className="border-gray-200"
+                      className="bg-[#1a1a1a] text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label htmlFor="login-password" className="text-sm font-semibold text-[#141414]">
+                    <label htmlFor="login-password" className="text-sm font-semibold text-white">
                       Password
                     </label>
                     <Input
@@ -146,7 +136,7 @@ const AuthPage = () => {
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       required
-                      className="border-gray-200"
+                      className="bg-[#1a1a1a] text-white"
                     />
                   </div>
                   <div className="flex items-center justify-between text-xs">
@@ -167,21 +157,13 @@ const AuthPage = () => {
                   >
                     Sign in
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleDemoLogin}
-                    className="w-full border-[#036aff]/20 text-[#036aff] font-bold hover:bg-[#036aff]/5 h-10"
-                  >
-                    Continue in demo mode
-                  </Button>
                 </form>
               </TabsContent>
 
               <TabsContent value="register" className="space-y-4 mt-6">
                 <form onSubmit={handleRegister} className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="register-name" className="text-sm font-semibold text-[#141414]">
+                    <label htmlFor="register-name" className="text-sm font-semibold text-white">
                       Full Name
                     </label>
                     <Input
@@ -191,25 +173,25 @@ const AuthPage = () => {
                       value={registerName}
                       onChange={(e) => setRegisterName(e.target.value)}
                       required
-                      className="border-gray-200"
+                      className="bg-[#1a1a1a] text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label htmlFor="register-email" className="text-sm font-semibold text-[#141414]">
+                    <label htmlFor="register-email" className="text-sm font-semibold text-white">
                       Email
                     </label>
                     <Input
                       id="register-email"
                       type="email"
-                      placeholder="your.email@student.tdtu.edu.vn"
+                      placeholder="example@email.com"
                       value={registerEmail}
                       onChange={(e) => setRegisterEmail(e.target.value)}
                       required
-                      className="border-gray-200"
+                      className="bg-[#1a1a1a] text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label htmlFor="register-password" className="text-sm font-semibold text-[#141414]">
+                    <label htmlFor="register-password" className="text-sm font-semibold text-white">
                       Password
                     </label>
                     <Input
@@ -219,11 +201,11 @@ const AuthPage = () => {
                       value={registerPassword}
                       onChange={(e) => setRegisterPassword(e.target.value)}
                       required
-                      className="border-gray-200"
+                      className="bg-[#1a1a1a] text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label htmlFor="register-confirm-password" className="text-sm font-semibold text-[#141414]">
+                    <label htmlFor="register-confirm-password" className="text-sm font-semibold text-white">
                       Confirm Password
                     </label>
                     <Input
@@ -233,11 +215,11 @@ const AuthPage = () => {
                       value={registerConfirmPassword}
                       onChange={(e) => setRegisterConfirmPassword(e.target.value)}
                       required
-                      className="border-gray-200"
+                      className="bg-[#1a1a1a] text-white"
                     />
                   </div>
                   <div className="text-xs text-gray-500">
-                    By registering, you agree to UniCircle's Terms of Service and Privacy Policy.
+                    By registering, you agree to DevConnect's Terms of Service and Privacy Policy.
                   </div>
                   <Button
                     type="submit"
@@ -253,8 +235,8 @@ const AuthPage = () => {
 
         <p className="text-center text-xs text-gray-500 mt-6">
           Need help? Contact support at{" "}
-          <a href="mailto:tdtu.unicircle@gmail.com" className="text-[#036aff] hover:underline">
-              tdtu.unicircle@gmail.com
+          <a href="mailto:devconnect@example.com" className="text-[#036aff] hover:underline">
+              devconnect@example.com
           </a>
         </p>
       </div>

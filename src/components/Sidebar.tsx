@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { BookOpen, FolderOpen, ListChecks, PanelLeft, PanelLeftClose, User, LogOut } from "lucide-react"
+import { Compass, ListChecks, PanelLeft, PanelLeftClose, User, LogOut, Hash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
@@ -13,9 +13,9 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { id: "home", label: "Student Feed", icon: ListChecks, path: "/" },
-  { id: "resource", label: "Resource", icon: FolderOpen, path: "/resource" },
-  { id: "collections", label: "Collections", icon: BookOpen, path: "/collections" },
+  { id: "home", label: "Feed", icon: ListChecks, path: "/" },
+  { id: "explore", label: "Explore", icon: Compass, path: "/explore" },
+  { id: "categories", label: "Categories", icon: Hash, path: "/categories" },
 ]
 
 export function Sidebar({ activeItem = "home", collapsed = false, onToggleCollapse }: SidebarProps) {
@@ -25,21 +25,21 @@ export function Sidebar({ activeItem = "home", collapsed = false, onToggleCollap
   return (
     <aside
       className={cn(
-        "h-screen border-r border-gray-200 bg-white flex flex-col overflow-hidden",
-        collapsed ? "w-20" : "w-64",
+        "h-screen flex flex-col overflow-hidden border border-[#333333]",
+        collapsed ? "w-20" : "w-70",
       )}
     >
       {/* Top: logo + toggle */}
-      <div className="border-b border-gray-100 px-3 py-4">
+      <div className="border-b border-[#333333] px-3 py-4">
         <div className={cn("flex items-center", collapsed ? "justify-center" : "justify-between")}>
           {!collapsed && (
             <Link
               to="/"
               className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
             >
-              <img src="/dev_connect-logo.png" alt="Uni Circle" className="w-8 h-8 object-contain" />
+              <img src="/dev_connect-logo.png" alt="Dev Connect" className="w-8 h-8 object-contain" />
               <div className="flex flex-col leading-tight">
-                <span className="text-lg font-bold text-[#141414]">DevConnect</span>
+                <span className="text-lg font-bold text-white">DevConnect</span>
                 <span className="text-xs text-gray-400">Social developer platform</span>
               </div>
             </Link>
@@ -47,7 +47,7 @@ export function Sidebar({ activeItem = "home", collapsed = false, onToggleCollap
           <Button
             variant="ghost"
             size="icon"
-            className="text-[#141414] hover:bg-[#f5f5f5]"
+            className="text-white hover:bg-[#333333]"
             onClick={onToggleCollapse}
           >
             {collapsed ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
@@ -69,7 +69,7 @@ export function Sidebar({ activeItem = "home", collapsed = false, onToggleCollap
                 "w-full justify-start h-11 text-left font-normal",
                 isActive
                   ? "bg-[#036aff] text-white hover:bg-[#036aff] hover:text-white"
-                  : "text-[#141414] hover:bg-[#f5f5f5]",
+                  : "text-white bg-transparent hover:bg-[#333333]",
                 collapsed ? "px-3 justify-center" : "gap-3 px-3"
               )}
             >
@@ -87,7 +87,7 @@ export function Sidebar({ activeItem = "home", collapsed = false, onToggleCollap
       </nav>
 
       {/* Bottom: notifications + profile access */}
-      <div className="border-t border-gray-100 px-3 py-3 space-y-2">
+      <div className="border-t border-[#333333] px-3 py-3 space-y-2">
         <div
           className={cn(
             "flex items-center gap-2",
@@ -99,7 +99,7 @@ export function Sidebar({ activeItem = "home", collapsed = false, onToggleCollap
             variant="ghost"
             asChild
             className={cn(
-              "flex-1 justify-start h-11 text-left font-normal hover:bg-[#f5f5f5]",
+              "flex-1 justify-start h-11 text-left font-normal hover:bg-[#333333]",
               collapsed ? "px-0 justify-center" : "gap-3 px-3",
             )}
           >
@@ -107,18 +107,18 @@ export function Sidebar({ activeItem = "home", collapsed = false, onToggleCollap
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.avatar || DEFAULT_AVATAR} alt={user?.name || "Avatar"} className="object-cover" />
-                  <AvatarFallback className="bg-[#f5f5f5] text-[#141414] text-sm">
+                  <AvatarFallback className="bg-[#333333] text-[#ffffff] text-sm">
                     {user?.initials || "U"}
                   </AvatarFallback>
                 </Avatar>
                 {!collapsed && (
                   <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-semibold text-[#141414] truncate">
+                    <span className="text-sm font-semibold text-[#ffffff] truncate">
                       {user?.name || "Profile"}
                     </span>
-                    <span className="text-xs text-gray-500 flex items-center gap-1 truncate">
+                    <span className="text-xs text-[#a0a0a0] flex items-center gap-1 truncate">
                       <User className="h-3 w-3" />
-                      {user?.studentId || "Student"}
+                      {user?.name || "Student"}
                     </span>
                   </div>
                 )}
@@ -142,7 +142,7 @@ export function Sidebar({ activeItem = "home", collapsed = false, onToggleCollap
           variant="ghost"
           onClick={logout}
           className={cn(
-            "w-full justify-start h-11 text-left font-normal text-red-600 hover:bg-red-50 hover:text-red-700",
+            "w-full justify-start h-11 text-left font-normal text-red-600 hover:bg-[#333333]",
             collapsed ? "px-0 justify-center" : "gap-3 px-3",
           )}
         >
