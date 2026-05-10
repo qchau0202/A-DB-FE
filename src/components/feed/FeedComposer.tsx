@@ -74,7 +74,7 @@ export function FeedComposer({ onPostCreated }: FeedComposerProps) {
 
     if (!accessToken) {
       toast.error("Authentication required", {
-        description: "Please log in to create a thread",
+        description: "Please log in to create a post",
       })
       return
     }
@@ -129,8 +129,8 @@ export function FeedComposer({ onPostCreated }: FeedComposerProps) {
         onPostCreated()
       }
     } catch (error) {
-      console.error("Failed to create thread:", error)
-      toast.error("Failed to create thread", {
+      console.error("Failed to create post:", error)
+      toast.error("Failed to create post", {
         description: error instanceof Error ? error.message : "Unknown error",
       })
     } finally {
@@ -164,8 +164,8 @@ export function FeedComposer({ onPostCreated }: FeedComposerProps) {
   const hasContent = content.trim().length > 0
 
   return (
-    <Card className="border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-      <CardContent className="p-4 md:p-5">
+    <Card className="border-none bg-transparent rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+      <CardContent className="p-4 md:p-5 bg">
         <div ref={containerRef} className="flex items-start gap-3">
           <Avatar className="h-10 w-10 shrink-0">
             <AvatarImage src={DEFAULT_AVATAR} alt="Avatar" className="object-cover" />
@@ -173,7 +173,7 @@ export function FeedComposer({ onPostCreated }: FeedComposerProps) {
               {user?.initials || "U"}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 ">
             <div className="space-y-3">
               <div className="relative">
                 <textarea
@@ -186,7 +186,7 @@ export function FeedComposer({ onPostCreated }: FeedComposerProps) {
                     "w-full resize-none rounded-xl border px-4 py-3 text-[15px] leading-relaxed outline-none transition-all duration-200",
                     isFocused
                       ? "border-[#036aff] ring-2 ring-[#036aff]/10 bg-white"
-                      : "border-gray-200 bg-gray-50/50 hover:border-gray-300 hover:bg-white",
+                      : "bg-gray-200 hover:border-gray-300 hover:bg-white",
                   )}
                   placeholder="What's on your mind? Share your thoughts, ideas, or questions..."
                 />
@@ -287,7 +287,7 @@ export function FeedComposer({ onPostCreated }: FeedComposerProps) {
                         "font-semibold text-sm px-5 h-9 rounded-lg transition-all",
                         (hasContent || attachedImages.length > 0) && !isPosting
                           ? "bg-[#036aff] text-white hover:bg-[#0052cc] shadow-sm hover:shadow-md"
-                          : "bg-gray-200 text-gray-400 cursor-not-allowed",
+                          : "bg-[#036aff] text-gray-400 cursor-not-allowed",
                       )}
                     >
                       {isPosting ? "Posting..." : "Post"}

@@ -1,51 +1,36 @@
-import { useEffect, useState, type ReactElement } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, Heart, Eye, ThumbsUp, Calendar, Edit, Trash2, Download, ExternalLink, Share2, Bookmark, Clock, FileText, MessageCircle, Loader2 } from "lucide-react"
+import { ArrowLeft, Heart, Eye, ThumbsUp, Calendar, Edit, Trash2, Download, ExternalLink, Share2, Bookmark, Clock, FileText } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import {
   getDocumentById,
   addDocumentReaction,
   deleteDocument,
+  updateDocument,
   type Document,
 } from "@/services/documents/documentService"
 import {
   getProfileByUserId,
-  getCommentsByTarget,
-  getCommentReplies,
   type BackendProfile,
-  type Comment,
 } from "@/services/mainServices"
 
-type CommentNode = Comment & {
-  replies: CommentNode[]
-}
 
-const countCommentNodes = (nodes: CommentNode[]): number =>
-  nodes.reduce((total, node) => total + 1 + countCommentNodes(node.replies), 0)
+const normalizeTag = (value: string) => value.trim().toLowerCase().replace(/\s+/g, "-")
 
-const flattenCommentNodes = (nodes: CommentNode[]): Comment[] =>
-  nodes.flatMap((node) => [node, ...flattenCommentNodes(node.replies)])
-
-const loadCommentTree = async (targetId: string): Promise<CommentNode[]> => {
-  const topLevelComments = await getCommentsByTarget(targetId, undefined, 50, 0)
-
-  const hydrateNode = async (comment: Comment): Promise<CommentNode> => {
-    const replies = await getCommentReplies(comment._id, 50, 0)
-    const nestedReplies = await Promise.all(replies.map(hydrateNode))
-
-    return {
-      ...comment,
-      replies: nestedReplies,
-    }
-  }
-
-  return Promise.all(topLevelComments.map(hydrateNode))
-}
 
 export default function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -54,11 +39,15 @@ export default function DocumentDetailPage() {
 
   const [document, setDocument] = useState<Document | null>(null)
   const [author, setAuthor] = useState<BackendProfile | null>(null)
-  const [comments, setComments] = useState<CommentNode[]>([])
-  const [commentAuthors, setCommentAuthors] = useState<Map<string, BackendProfile>>(new Map())
   const [loading, setLoading] = useState(true)
-  const [commentsLoading, setCommentsLoading] = useState(false)
   const [reacting, setReacting] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState("")
+  const [editBody, setEditBody] = useState("")
+  const [editTagDraft, setEditTagDraft] = useState("")
+  const [editTags, setEditTags] = useState<string[]>([])
+  const [savingEdit, setSavingEdit] = useState(false)
 
   useEffect(() => {
     const fetchDocument = async () => {
@@ -68,6 +57,9 @@ export default function DocumentDetailPage() {
         setLoading(true)
         const doc = await getDocumentById(id)
         setDocument(doc)
+        setEditTitle(doc.title || "")
+        setEditBody(doc.body || "")
+        setEditTags(doc.category_tags || [])
       } catch (error) {
         console.error("Failed to fetch document:", error)
         toast.error("Failed to load document")
@@ -98,48 +90,6 @@ export default function DocumentDetailPage() {
     fetchAuthor()
   }, [document, accessToken])
 
-  useEffect(() => {
-    const fetchComments = async () => {
-      if (!document) {
-        setComments([])
-        setCommentAuthors(new Map())
-        setCommentsLoading(false)
-        return
-      }
-
-      try {
-        setCommentsLoading(true)
-        const tree = await loadCommentTree(document._id)
-        setComments(tree)
-
-        const flatComments = flattenCommentNodes(tree)
-        const uniqueAuthorIds = [...new Set(flatComments.map((comment) => comment.author_id).filter(Boolean))]
-        const authorsMap = new Map<string, BackendProfile>()
-
-        await Promise.all(
-          uniqueAuthorIds.map(async (authorId) => {
-            try {
-              const profile = await getProfileByUserId(authorId, accessToken || undefined)
-              authorsMap.set(authorId, profile)
-            } catch (error) {
-              console.error(`Failed to fetch comment author ${authorId}:`, error)
-            }
-          }),
-        )
-
-        setCommentAuthors(authorsMap)
-      } catch (error) {
-        console.error("Failed to fetch comments:", error)
-        toast.error("Failed to load comments")
-        setComments([])
-        setCommentAuthors(new Map())
-      } finally {
-        setCommentsLoading(false)
-      }
-    }
-
-    fetchComments()
-  }, [document, accessToken])
 
   const handleReaction = async (reaction: 'like' | 'insightful') => {
     if (!document || reacting) return
@@ -159,72 +109,55 @@ export default function DocumentDetailPage() {
   const handleDelete = async () => {
     if (!document || !accessToken) return
 
-    if (!confirm("Are you sure you want to delete this document?")) return
-
     try {
       await deleteDocument(document._id, accessToken)
       toast.success("Document deleted")
-      navigate("/explore")
+      navigate("/feed")
     } catch (error) {
       toast.error("Failed to delete document")
     }
   }
 
-  const isAuthor = user?.id === document?.author_id
-  const totalComments = countCommentNodes(comments)
-
-  const renderCommentNode = (comment: CommentNode, depth = 0): ReactElement => {
-    const profile = commentAuthors.get(comment.author_id)
-    const authorName = profile?.display_name || profile?.username || "Unknown"
-    const authorInitials = authorName.charAt(0).toUpperCase()
-
-    return (
-      <div
-        key={comment._id}
-        className={`${depth > 0 ? "ml-5 pl-5 border-l border-[#2a2a2a]" : ""} ${depth > 0 ? "mt-4" : ""}`}
-      >
-        <div className="rounded-xl border border-[#2a2a2a] bg-[#141414] p-4">
-          <div className="flex items-start gap-3">
-            <Avatar className="h-10 w-10 ring-2 ring-[#ff6154]/10 shrink-0">
-              <AvatarImage src={profile?.avatar_url || ""} />
-              <AvatarFallback className="bg-gradient-to-br from-[#ff6154] to-[#e55a4e] text-white text-sm">
-                {authorInitials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-white font-medium">{authorName}</p>
-                {depth > 0 && (
-                  <Badge variant="outline" className="border-[#2a2a2a] text-gray-400 bg-black/20">
-                    Reply
-                  </Badge>
-                )}
-                <span className="text-xs text-gray-500">
-                  {comment.createdAt
-                    ? new Date(comment.createdAt).toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })
-                    : "Recently"}
-                </span>
-              </div>
-              <p className="mt-2 text-sm sm:text-base text-gray-300 leading-relaxed whitespace-pre-wrap">
-                {comment.content}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {comment.replies.length > 0 && (
-          <div className="mt-4 space-y-4">
-            {comment.replies.map((reply) => renderCommentNode(reply, depth + 1))}
-          </div>
-        )}
-      </div>
-    )
+  const addEditTag = () => {
+    const nextTag = normalizeTag(editTagDraft)
+    if (!nextTag) return
+    setEditTags((current) => (current.includes(nextTag) ? current : [...current, nextTag]))
+    setEditTagDraft("")
   }
+
+  const removeEditTag = (tag: string) => {
+    setEditTags((current) => current.filter((item) => item !== tag))
+  }
+
+  const handleSaveEdit = async () => {
+    if (!document || !accessToken) return
+    if (!editTitle.trim()) {
+      toast.error("Title is required")
+      return
+    }
+
+    try {
+      setSavingEdit(true)
+      const updated = await updateDocument(document._id, {
+        title: editTitle.trim(),
+        body: editBody.trim() || " ",
+        category_tags: editTags.length > 0 ? editTags : undefined,
+        is_published: document.is_published,
+        expected_version: document.version ?? 0,
+      }, accessToken)
+      setDocument(updated)
+      setIsEditOpen(false)
+      toast.success("Document updated")
+    } catch (error) {
+      console.error("Failed to update document:", error)
+      toast.error("Failed to update document")
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  const isAuthor = user?.id === document?.author_id
+
 
   if (loading) {
     return (
@@ -241,8 +174,8 @@ export default function DocumentDetailPage() {
       <div className="min-h-screen bg-[#0d0d0d] p-6">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-gray-400">Document not found</p>
-          <Button onClick={() => navigate("/explore")} className="mt-4">
-            Back to Explore
+          <Button onClick={() => navigate("/feed")} className="mt-4">
+            Back to feed
           </Button>
         </div>
       </div>
@@ -263,8 +196,8 @@ export default function DocumentDetailPage() {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-[#ff6154]/20 via-[#1a1a1a] to-[#2a2a2a] flex items-center justify-center">
-            <FileText className="h-24 w-24 text-[#ff6154]/30" />
+          <div className="w-full h-full bg-gradient-to-br from-[#036aff]/20 via-[#1a1a1a] to-[#2a2a2a] flex items-center justify-center">
+            <FileText className="h-24 w-24 text-[#036aff]/30" />
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-[#0d0d0d]/50 to-transparent" />
@@ -272,11 +205,11 @@ export default function DocumentDetailPage() {
         {/* Back Button - Floating */}
         <Button
           variant="ghost"
-          onClick={() => navigate("/explore")}
+          onClick={() => navigate("/feed")}
           className="absolute top-4 left-4 z-10 text-white/80 hover:text-white hover:bg-white/10 backdrop-blur-sm"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          Back to feed
         </Button>
 
         {/* External Link Badge */}
@@ -329,9 +262,9 @@ export default function DocumentDetailPage() {
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <Avatar className="h-12 w-12 ring-2 ring-[#ff6154]/20">
+                <Avatar className="h-12 w-12 ring-2 ring-[#036aff]/20">
                   <AvatarImage src={author?.avatar_url || ""} />
-                  <AvatarFallback className="bg-gradient-to-br from-[#ff6154] to-[#e55a4e] text-white text-lg">
+                  <AvatarFallback className="bg-gradient-to-br from-[#036aff] to-[#0256cc] text-white text-lg">
                     {authorInitials}
                   </AvatarFallback>
                 </Avatar>
@@ -365,7 +298,7 @@ export default function DocumentDetailPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/document/${document._id}/edit`)}
+                      onClick={() => setIsEditOpen(true)}
                       className="border-[#2a2a2a] text-gray-300 hover:bg-[#2a2a2a]"
                     >
                       <Edit className="h-4 w-4 mr-2" />
@@ -374,7 +307,7 @@ export default function DocumentDetailPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleDelete}
+                      onClick={() => setIsDeleteOpen(true)}
                       className="border-red-900/50 text-red-400 hover:bg-red-900/20 hover:text-red-300"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -412,12 +345,12 @@ export default function DocumentDetailPage() {
             {/* Stats Bar */}
             <div className="flex flex-wrap items-center gap-6 mb-8 pb-6 border-b border-[#2a2a2a]">
               <div className="flex items-center gap-2 text-sm">
-                <Eye className="h-4 w-4 text-[#ff6154]" />
+                <Eye className="h-4 w-4 text-[#036aff]" />
                 <span className="text-white font-medium">{document.view_count || 0}</span>
                 <span className="text-gray-400">views</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <Download className="h-4 w-4 text-blue-400" />
+                <Download className="h-4 w-4 text-[#036aff]" />
                 <span className="text-white font-medium">{document.downloads || 0}</span>
                 <span className="text-gray-400">downloads</span>
               </div>
@@ -462,42 +395,89 @@ export default function DocumentDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Comments */}
-        <Card className="border border-[#2a2a2a] bg-[#1a1a1a] rounded-xl overflow-hidden mb-6">
-          <CardContent className="p-6 sm:p-8">
-            <div className="flex items-center justify-between gap-4 mb-6 pb-4 border-b border-[#2a2a2a]">
-              <div>
-                <div className="flex items-center gap-2 text-white font-semibold text-lg">
-                  <MessageCircle className="h-5 w-5 text-[#ff6154]" />
-                  Discussion
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="max-w-2xl bg-[#1a1a1a] border-[#2a2a2a] text-white max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-white">Edit Document</DialogTitle>
+              <DialogDescription className="text-gray-400">Update the title, body, and tags using the same editing style as creation.</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Document title"
+                className="bg-[#1a1a1a] border-[#2a2a2a] text-white text-base h-11"
+              />
+
+              <textarea
+                rows={6}
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+                placeholder="Write your document content here..."
+                className="w-full rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] px-4 py-3 text-base text-white outline-none focus:ring-2 focus:ring-[#036aff]/20"
+              />
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-300">Tags</label>
+                <div className="flex gap-2">
+                  <Input
+                    value={editTagDraft}
+                    onChange={(e) => setEditTagDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        addEditTag()
+                      }
+                    }}
+                    placeholder="Add a tag and press Enter"
+                    className="bg-[#1a1a1a] border-[#2a2a2a] text-white text-base h-11"
+                  />
+                  <Button type="button" onClick={addEditTag} variant="outline" className="border-[#2a2a2a] text-gray-300 hover:text-white hover:bg-[#2a2a2a]">
+                    Add
+                  </Button>
                 </div>
-                <p className="text-sm text-gray-400 mt-1">
-                  {commentsLoading ? "Loading conversation..." : `${totalComments} comment${totalComments === 1 ? "" : "s"}`}
-                </p>
+                {editTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {editTags.map((tag) => (
+                      <Badge key={tag} variant="outline" className="border-[#2a2a2a] text-sm px-3 py-1 text-gray-300">
+                        {tag}
+                        <button type="button" onClick={() => removeEditTag(tag)} className="ml-2 text-gray-500 hover:text-gray-300">×</button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
-              <Badge variant="outline" className="border-[#2a2a2a] text-gray-300 bg-black/20">
-                Hierarchical view
-              </Badge>
             </div>
 
-            {commentsLoading ? (
-              <div className="flex items-center justify-center py-12 text-gray-400">
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Loading comments...
-              </div>
-            ) : comments.length > 0 ? (
-              <div className="space-y-4">
-                {comments.map((comment) => renderCommentNode(comment))}
-              </div>
-            ) : (
-              <div className="text-center py-10">
-                <MessageCircle className="h-10 w-10 text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-300 font-medium">No comments yet</p>
-                <p className="text-sm text-gray-500 mt-1">Be the first to start the discussion.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            <DialogFooter className="flex justify-between gap-3 sm:justify-between">
+              <Button variant="ghost" className="text-sm font-bold text-gray-400 hover:text-white hover:bg-[#2a2a2a]" onClick={() => setIsEditOpen(false)} disabled={savingEdit}>
+                Cancel
+              </Button>
+              <Button className="bg-[#036aff] text-white font-bold hover:bg-[#036aff]/90" onClick={handleSaveEdit} disabled={savingEdit}>
+                {savingEdit ? "Saving..." : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <DialogContent className="bg-[#1a1a1a] border-[#2a2a2a] text-white">
+            <DialogHeader>
+              <DialogTitle className="text-white">Delete Document?</DialogTitle>
+              <DialogDescription className="text-gray-400">This action cannot be undone.</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteOpen(false)} className="border-[#2a2a2a] text-white hover:bg-[#2a2a2a]">
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete}>
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
 
         {/* Action Footer */}
         <Card className="border border-[#2a2a2a] bg-gradient-to-r from-[#1a1a1a] to-[#252525] rounded-xl">
@@ -512,7 +492,7 @@ export default function DocumentDetailPage() {
                   size="lg"
                   onClick={() => handleReaction('like')}
                   disabled={reacting}
-                  className="border-[#ff6154]/50 text-[#ff6154] hover:bg-[#ff6154]/10 hover:border-[#ff6154]"
+                  className="border-[#036aff]/50 text-[#036aff] hover:bg-[#ff6154]/10 hover:border-[#ff6154]"
                 >
                   <ThumbsUp className="h-5 w-5 mr-2" />
                   Like

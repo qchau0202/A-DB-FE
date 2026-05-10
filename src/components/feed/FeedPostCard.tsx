@@ -32,9 +32,37 @@ interface FeedPostCardProps {
 function getPostText(post: Post): string {
   if (!post.content_blocks?.length) return ""
   return post.content_blocks
-    .filter((b: any) => b.type === "text")
-    .map((b: any) => b.data)
+    .filter((b: any) => b.type === "text" || b.type === "code")
+    .map((b: any) => b.type === "code" ? `\`${String(b.data).slice(0, 160)}\`` : b.data)
     .join(" ")
+}
+
+function renderContentBlocks(post: Post, compact = true) {
+  if (!post.content_blocks?.length) return null
+
+  return post.content_blocks.slice(0, compact ? 2 : post.content_blocks.length).map((block: any, index) => {
+    if (block.type === "code") {
+      const codeText = String(block.data || "")
+      return (
+        <pre
+          key={`${block.type}-${index}`}
+          className="mb-3 overflow-x-auto rounded-xl border border-[#2a2a2a] bg-[#0b1220] p-3 font-mono text-xs leading-6 text-[#dbeafe]"
+        >
+          <code>{compact && codeText.length > 180 ? `${codeText.slice(0, 180).trimEnd()}…` : codeText}</code>
+        </pre>
+      )
+    }
+
+    if (block.type === "image") return null
+
+    return (
+      <p key={`${block.type}-${index}`} className="mb-3 text-sm leading-relaxed text-white whitespace-pre-wrap">
+        {compact && String(block.data || "").length > 220
+          ? `${String(block.data || "").slice(0, 220).trimEnd()}…`
+          : String(block.data || "")}
+      </p>
+    )
+  })
 }
 
 export function FeedPostCard({ post }: FeedPostCardProps) {
@@ -232,9 +260,11 @@ export function FeedPostCard({ post }: FeedPostCardProps) {
         )}
 
         {/* Content */}
-        {displayContent && (
+        {post.content_blocks?.length ? (
+          renderContentBlocks(post, true)
+        ) : displayContent ? (
           <p className="text-sm text-white mb-3 leading-relaxed">{displayContent}</p>
-        )}
+        ) : null}
 
         {/* Images */}
         {post.image_urls && post.image_urls.length > 0 && (

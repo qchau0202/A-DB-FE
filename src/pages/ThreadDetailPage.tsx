@@ -34,6 +34,8 @@ import {
   updateComment,
   getProfileByUserId,
   addPostReaction,
+  updatePost,
+  deletePost,
   type Post,
   type Comment,
   type BackendProfile,
@@ -66,6 +68,11 @@ export default function ThreadDetailPage() {
   const [editingComment, setEditingComment] = useState<string | null>(null)
   const [editCommentContent, setEditCommentContent] = useState("")
   const [deletingComment, setDeletingComment] = useState<string | null>(null)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState("")
+  const [editContent, setEditContent] = useState("")
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   // Load post and comments
   const loadData = async () => {
@@ -277,7 +284,6 @@ export default function ThreadDetailPage() {
           Back to feed
         </Button>
 
-        {/* Post Skeleton */}
         <Card className="border border-[#2a2a2a] rounded-xl mb-6 bg-[#1a1a1a]">
           <CardContent className="p-5 space-y-4">
             <div className="flex items-start justify-between">
@@ -298,7 +304,6 @@ export default function ThreadDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Comments Skeleton */}
         <Card className="border border-[#2a2a2a] rounded-xl bg-[#1a1a1a]">
           <CardContent className="p-5 space-y-4">
             <Skeleton className="h-5 w-32 bg-[#2a2a2a]" />
@@ -402,6 +407,27 @@ export default function ThreadDetailPage() {
                 </Dialog>
               </>
             )}
+
+            {/* Owner actions: edit / delete */}
+            {isOwner && accessToken && (
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="text-white hover:bg-[#2a2a2a]">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => navigate(`/feed/${id}/edit`)}>
+                      <Pencil className="h-4 w-4 mr-2" /> Edit post
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowDeleteDialog(true)}>
+                      <Trash2 className="h-4 w-4 mr-2" /> Delete post
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
           </div>
 
           {/* Tags */}
@@ -421,9 +447,47 @@ export default function ThreadDetailPage() {
           )}
 
           {/* Content */}
-          {content && (
+          {post.content_blocks?.length ? (
+            <div className="space-y-3">
+              {post.content_blocks.map((block: any, index) => {
+                if (block.type === "code") {
+                  return (
+                    <pre key={`code-${index}`} className="overflow-x-auto rounded-xl border border-[#2a2a2a] bg-[#0b1220] p-4 font-mono text-sm leading-6 text-[#dbeafe] whitespace-pre-wrap">
+                      <code>{String(block.data || "")}</code>
+                    </pre>
+                  )
+                }
+
+                if (block.type === "image") {
+                  const urls = Array.isArray(block.data?.urls) ? block.data.urls : Array.isArray(block.data) ? block.data : []
+                  return urls.length > 0 ? (
+                    <div key={`image-${index}`} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {urls.map((url: string, imageIndex: number) => (
+                        <img
+                          key={`${url}-${imageIndex}`}
+                          src={url}
+                          alt="Post content"
+                          className="rounded-xl w-full max-h-[420px] object-cover border border-[#2a2a2a]"
+                          onError={(e) => {
+                            e.currentTarget.src = "https://via.placeholder.com/800x600?text=Image+Not+Found"
+                            e.currentTarget.onerror = null
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : null
+                }
+
+                return (
+                  <p key={`text-${index}`} className="text-gray-300 whitespace-pre-wrap leading-relaxed">
+                    {String(block.data || "")}
+                  </p>
+                )
+              })}
+            </div>
+          ) : content ? (
             <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">{content}</p>
-          )}
+          ) : null}
 
           {/* Images */}
           {post.image_urls && post.image_urls.length > 0 && (
@@ -496,6 +560,85 @@ export default function ThreadDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="bg-[#1a1a1a] border-[#2a2a2a] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">Delete Post?</DialogTitle>
+            <DialogDescription className="text-gray-400">This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className="border-[#2a2a2a] text-white hover:bg-[#2a2a2a]">Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!id || !accessToken) return
+                try {
+                  await deletePost(id, accessToken)
+                  setShowDeleteDialog(false)
+                  toast.success("Post deleted")
+                  navigate("/feed")
+                } catch (error) {
+                  toast.error("Failed to delete post")
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Post Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="bg-[#1a1a1a] border-[#2a2a2a] text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+            <DialogDescription className="text-gray-400">Update the title and description for your post.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              placeholder="Title"
+              className="w-full rounded-lg border border-[#2a2a2a] bg-[#0d0d0d] px-3 py-2 text-sm text-white outline-none"
+            />
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              rows={6}
+              placeholder="Description"
+              className="w-full rounded-lg border border-[#2a2a2a] bg-[#0d0d0d] px-3 py-2 text-sm text-white outline-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)} className="border-[#2a2a2a] text-white hover:bg-[#2a2a2a]">Cancel</Button>
+            <Button
+              onClick={async () => {
+                if (!id || !accessToken) return
+                try {
+                  setSavingEdit(true)
+                  const payload: any = { title: editTitle }
+                  payload.content_blocks = [{ type: 'text', data: editContent }]
+                  const updated = await updatePost(id, payload, accessToken)
+                  setPost(updated)
+                  setIsEditOpen(false)
+                  toast.success("Post updated")
+                } catch (err) {
+                  console.error(err)
+                  toast.error("Failed to update post")
+                } finally {
+                  setSavingEdit(false)
+                }
+              }}
+              className="bg-[#036aff] text-white hover:bg-[#0258cc]"
+              disabled={savingEdit}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Comments Section */}
       <Card className="border border-[#2a2a2a] rounded-xl bg-[#1a1a1a]">

@@ -10,6 +10,8 @@ import AuthPage from './pages/AuthPage'
 import ProfilePage from './pages/ProfilePage'
 import CategoriesPage from './pages/CategoriesPage'
 import UserCommunitiesPage from './pages/UserCommunitiesPage'
+import CreatePostPage from './pages/CreatePostPage'
+import EditPostPage from './pages/EditPostPage'
 import { useAuth } from './contexts/AuthContext'
 
 function ProtectedRoute() {
@@ -29,7 +31,9 @@ function App() {
           <Route path="/" element={<FeedPage />} />
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/feed/:id" element={<ThreadDetailPage />} />
+          <Route path="/feed/:id/edit" element={<EditPostPage />} />
           <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/create" element={<CreatePostPage />} />
           <Route path="/document/:id" element={<DocumentDetailPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/categories/communities" element={<UserCommunitiesPage />} />

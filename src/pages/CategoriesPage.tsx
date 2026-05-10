@@ -210,21 +210,21 @@ export default function CategoriesPage() {
                 <MessageSquare className="h-4 w-4" />
                 <span className="text-sm font-medium">Posts</span>
               </div>
-              <p className="text-2xl font-bold text-white">{postTags.reduce((sum, t) => sum + t.count, 0)}</p>
+              <p className="text-2xl font-bold text-white">{postTags.filter(t => t.type === 'post').reduce((sum, t) => sum + t.count, 0)}</p>
             </div>
             <div className="bg-[#101827] rounded-xl p-4 border border-[#1f3f7a]">
               <div className="flex items-center gap-2 text-blue-300 mb-1">
                 <BookOpen className="h-4 w-4" />
                 <span className="text-sm font-medium">Docs</span>
               </div>
-              <p className="text-2xl font-bold text-white">{documentTags.reduce((sum, t) => sum + t.count, 0)}</p>
+              <p className="text-2xl font-bold text-white">{documentTags.filter(t => t.type === 'document').reduce((sum, t) => sum + t.count, 0)}</p>
             </div>
             <div className="bg-[#101827] rounded-xl p-4 border border-[#1f3f7a]">
               <div className="flex items-center gap-2 text-blue-300 mb-1">
                 <Eye className="h-4 w-4" />
                 <span className="text-sm font-medium">Quickies</span>
               </div>
-              <p className="text-2xl font-bold text-white">{quickieTags.reduce((sum, t) => sum + t.count, 0)}</p>
+              <p className="text-2xl font-bold text-white">{quickieTags.filter(t => t.type === 'quickie').reduce((sum, t) => sum + t.count, 0)}</p>
             </div>
             <div className="bg-[#101827] rounded-xl p-4 border border-[#1f3f7a]">
               <div className="flex items-center gap-2 text-blue-300 mb-1">
@@ -366,7 +366,7 @@ export default function CategoriesPage() {
                 </Button>
               </div>
               <div className="flex flex-wrap gap-3">
-                {postTags.slice(0, 8).map((tag) => (
+                {postTags.filter(t => t.type === 'post').slice(0, 8).map((tag) => (
                   <button
                     key={tag.name}
                     type="button"
@@ -403,7 +403,7 @@ export default function CategoriesPage() {
               </div>
               <div className="flex flex-wrap gap-3">
                 {quickieTags.length > 0 ? (
-                  quickieTags.map((tag) => (
+                  quickieTags.filter(t => t.type === 'quickie').map((tag) => (
                     <button
                       key={tag.name}
                       type="button"
@@ -443,7 +443,7 @@ export default function CategoriesPage() {
               </div>
               <div className="flex flex-wrap gap-3">
                 {documentTags.length > 0 ? (
-                  documentTags.map((tag) => (
+                  documentTags.filter(t => t.type === 'document').map((tag) => (
                     <button
                       key={tag.name}
                       type="button"
@@ -483,7 +483,7 @@ export default function CategoriesPage() {
               </div>
               <div className="flex flex-wrap gap-3">
                 {snippetTags.length > 0 ? (
-                  snippetTags.map((tag) => (
+                  snippetTags.filter(t => t.type === 'snippet').map((tag) => (
                     <button
                       key={tag.name}
                       type="button"
