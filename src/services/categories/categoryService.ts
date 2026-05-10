@@ -17,6 +17,12 @@ export interface CategoriesResponse {
   users: TagCategory[]
   documents: TagCategory[]
   snippets: TagCategory[]
+  counts?: {
+    posts: number
+    quickies: number
+    documents: number
+    snippets: number
+  }
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {

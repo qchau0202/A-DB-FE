@@ -42,6 +42,7 @@ export default function CategoriesPage() {
   const [snippetTags, setSnippetTags] = useState<TagCategory[]>([])
   const [userCategories, setUserCategories] = useState<TagCategory[]>([])
   const [loading, setLoading] = useState(true)
+  const [counts, setCounts] = useState<{ posts: number; quickies: number; documents: number; snippets: number } | null>(null)
   
   // Selected tag content viewer
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
@@ -60,6 +61,7 @@ export default function CategoriesPage() {
       setDocumentTags(data.documents || [])
       setSnippetTags(data.snippets || [])
       setUserCategories(data.users || [])
+      setCounts(data.counts || null)
     } catch (error) {
       console.error("Failed to load categories:", error)
       toast.error("Failed to load categories")
@@ -210,21 +212,21 @@ export default function CategoriesPage() {
                 <MessageSquare className="h-4 w-4" />
                 <span className="text-sm font-medium">Posts</span>
               </div>
-              <p className="text-2xl font-bold text-white">{postTags.filter(t => t.type === 'post').reduce((sum, t) => sum + t.count, 0)}</p>
+              <p className="text-2xl font-bold text-white">{counts?.posts ?? 0}</p>
             </div>
             <div className="bg-[#101827] rounded-xl p-4 border border-[#1f3f7a]">
               <div className="flex items-center gap-2 text-blue-300 mb-1">
                 <BookOpen className="h-4 w-4" />
                 <span className="text-sm font-medium">Docs</span>
               </div>
-              <p className="text-2xl font-bold text-white">{documentTags.filter(t => t.type === 'document').reduce((sum, t) => sum + t.count, 0)}</p>
+              <p className="text-2xl font-bold text-white">{counts?.documents ?? 0}</p>
             </div>
             <div className="bg-[#101827] rounded-xl p-4 border border-[#1f3f7a]">
               <div className="flex items-center gap-2 text-blue-300 mb-1">
                 <Eye className="h-4 w-4" />
                 <span className="text-sm font-medium">Quickies</span>
               </div>
-              <p className="text-2xl font-bold text-white">{quickieTags.filter(t => t.type === 'quickie').reduce((sum, t) => sum + t.count, 0)}</p>
+              <p className="text-2xl font-bold text-white">{counts?.quickies ?? 0}</p>
             </div>
             <div className="bg-[#101827] rounded-xl p-4 border border-[#1f3f7a]">
               <div className="flex items-center gap-2 text-blue-300 mb-1">
@@ -298,7 +300,7 @@ export default function CategoriesPage() {
               <div className="flex flex-wrap gap-3">
                 {filteredTags.map((tag) => (
                   <button
-                    key={tag.name}
+                    key={`${tag.type}:${tag.name}`}
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
@@ -332,7 +334,7 @@ export default function CategoriesPage() {
               <div className="flex flex-wrap gap-3">
                 {trendingTags.map((tag) => (
                   <button
-                    key={tag.name}
+                    key={`${tag.type}:${tag.name}`}
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
@@ -368,7 +370,7 @@ export default function CategoriesPage() {
               <div className="flex flex-wrap gap-3">
                 {postTags.filter(t => t.type === 'post').slice(0, 8).map((tag) => (
                   <button
-                    key={tag.name}
+                    key={`${tag.type}:${tag.name}`}
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
@@ -405,7 +407,7 @@ export default function CategoriesPage() {
                 {quickieTags.length > 0 ? (
                   quickieTags.filter(t => t.type === 'quickie').map((tag) => (
                     <button
-                      key={tag.name}
+                      key={`${tag.type}:${tag.name}`}
                       type="button"
                       onClick={(e) => {
                         e.preventDefault()
@@ -445,7 +447,7 @@ export default function CategoriesPage() {
                 {documentTags.length > 0 ? (
                   documentTags.filter(t => t.type === 'document').map((tag) => (
                     <button
-                      key={tag.name}
+                      key={`${tag.type}:${tag.name}`}
                       type="button"
                       onClick={(e) => {
                         e.preventDefault()
@@ -485,7 +487,7 @@ export default function CategoriesPage() {
                 {snippetTags.length > 0 ? (
                   snippetTags.filter(t => t.type === 'snippet').map((tag) => (
                     <button
-                      key={tag.name}
+                      key={`${tag.type}:${tag.name}`}
                       type="button"
                       onClick={(e) => {
                         e.preventDefault()
